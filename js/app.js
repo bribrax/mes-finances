@@ -14,6 +14,7 @@ let firstRun = false;
 const DEFAULT_CATEGORIES = [
   "Alimentation", "Logement", "Transports", "Santé", "Loisirs",
   "Restaurants", "Shopping", "Abonnements", "Assurances", "Impôts",
+  "Vacances", "Frais bancaires", "Sorties", "Épargne", "Cadeaux",
   "Salaire", "Virements", "Autre"
 ];
 
@@ -61,6 +62,16 @@ function loadState() {
   if (typeof s.invest.tdKey !== "string") s.invest.tdKey = "";
   if (typeof s.invest.refCurrency !== "string") s.invest.refCurrency = "CHF";
   if (typeof s.currency !== "string") s.currency = s.invest.refCurrency;
+  // Migration : ajouter les catégories par défaut manquantes (« Autre » reste en dernier)
+  if (Array.isArray(s.categories)) {
+    for (const c of DEFAULT_CATEGORIES) {
+      if (!s.categories.includes(c)) {
+        const i = s.categories.indexOf("Autre");
+        if (i >= 0) s.categories.splice(i, 0, c);
+        else s.categories.push(c);
+      }
+    }
+  }
   return s;
 }
 
