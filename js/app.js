@@ -1495,7 +1495,10 @@ document.getElementById("btn-fetch-prices").addEventListener("click", async () =
     priceStatus(`${added} cours ajoutés, ${replaced} mis à jour pour ${asset.name}.`, true);
     renderAssets();
   } catch (err) {
-    priceStatus(err.message, false);
+    const msg = err instanceof TypeError
+      ? "La requête n'a pas pu partir (connexion coupée, bloqueur de publicité, ou blocage CORS). Vérifiez votre connexion et vos extensions, puis réessayez."
+      : err.message;
+    priceStatus(msg, false);
   }
 });
 
@@ -1530,7 +1533,9 @@ async function fetchCoinGecko(asset) {
 async function fetchEODHD(asset) {
   const key = (inv().eodKey || "").trim();
   if (!key) throw new Error("Renseignez d'abord votre clé EODHD gratuite dans Portefeuille → Paramètres (inscription sur eodhd.com).");
-  const url = `https://eodhd.com/api/eod/${encodeURIComponent(asset.symbol)}?api_token=${encodeURIComponent(key)}&period=d&fmt=json`;
+  const base = (window.EODHD_PROXY || "").trim().replace(/\/+$/, "");
+  if (!base) throw new Error("EODHD bloque les appels directs depuis un navigateur (CORS). Le propriétaire du site doit déployer le petit relais gratuit fourni (fichier worker-eodhd.js) sur Cloudflare Workers et coller son adresse dans js/config.js — mode d'emploi dans le README.");
+  const url = `${base}/eod/${encodeURIComponent(asset.symbol)}?api_token=${encodeURIComponent(key)}&period=d&fmt=json`;
   const res = await fetch(url);
   if (res.status === 401 || res.status === 403)
     throw new Error("EODHD refuse la clé API (" + res.status + ") — vérifiez-la dans Portefeuille → Paramètres, ou votre quota de 20 requêtes/jour est peut-être épuisé.");
