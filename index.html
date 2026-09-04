@@ -159,12 +159,15 @@
           <button id="btn-update-fx" class="btn small">Actualiser les taux de change (BCE)</button>
         </div>
         <div class="pf-settings mt">
-          <label>Clé API Twelve Data <span class="muted">(optionnelle, pour les actions et ETF)</span>
+          <label>Clé API EODHD <span class="muted">(gratuite — actions et ETF de toutes les bourses)</span>
+            <div class="input-suffix"><input type="text" id="pf-eodkey" placeholder="votre clé gratuite eodhd.com" autocomplete="off"></div>
+          </label>
+          <label>Clé API Twelve Data <span class="muted">(optionnelle — actions US, forex, cryptos)</span>
             <div class="input-suffix"><input type="text" id="pf-tdkey" placeholder="votre clé gratuite" autocomplete="off"></div>
           </label>
         </div>
         <p id="pf-api-status" class="import-status hidden"></p>
-        <p class="hint">Exemples : en Suisse, les plus-values privées ne sont en général pas imposées (0 %) ; en France, la flat tax est de 30 %. Les taux de change servent à totaliser des actifs en devises différentes — le bouton les récupère automatiquement auprès de la Banque centrale européenne (Frankfurter, gratuit). Pour les actions/ETF, créez une clé gratuite sur twelvedata.com : elle reste stockée dans votre navigateur.</p>
+        <p class="hint">Exemples : en Suisse, les plus-values privées ne sont en général pas imposées (0 %) ; en France, la flat tax est de 30 %. Les taux de change servent à totaliser des actifs en devises différentes — le bouton les récupère automatiquement auprès de la Banque centrale européenne (Frankfurter, gratuit). Pour les actions et ETF de toutes les bourses (Euronext, Toronto, NYSE…), créez une clé gratuite sur eodhd.com (20 requêtes/jour, un an d'historique). Twelve Data reste utilisable pour les actions US, le forex et les cryptos. Les clés restent stockées dans votre navigateur.</p>
       </div>
     </div>
   </div>
@@ -261,7 +264,8 @@
                     <select id="api-source">
                       <option value="">Aucune (manuel / fichier)</option>
                       <option value="coingecko">CoinGecko — cryptos</option>
-                      <option value="twelvedata">Twelve Data — actions et ETF</option>
+                      <option value="eodhd">EODHD — actions et ETF (Europe, Canada, USA…)</option>
+                      <option value="twelvedata">Twelve Data — actions US, forex, cryptos</option>
                     </select>
                   </label>
                   <label class="stack">Identifiant / symbole
