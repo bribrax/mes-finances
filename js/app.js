@@ -60,6 +60,7 @@ function loadState() {
   if (typeof s.invest.taxRate !== "number") s.invest.taxRate = 0;
   if (!s.invest.fx || typeof s.invest.fx !== "object") s.invest.fx = {};
   if (typeof s.invest.tdKey !== "string") s.invest.tdKey = "";
+  if (typeof s.invest.eodKey !== "string") s.invest.eodKey = "";
   if (typeof s.invest.refCurrency !== "string") s.invest.refCurrency = "CHF";
   if (typeof s.currency !== "string") s.currency = s.invest.refCurrency;
   // Migration : ajouter les catégories par défaut manquantes (« Autre » reste en dernier)
@@ -1094,6 +1095,10 @@ function renderPfSettings() {
   const tdInput = document.getElementById("pf-tdkey");
   tdInput.value = inv().tdKey || "";
   tdInput.onchange = () => { inv().tdKey = tdInput.value.trim(); saveState(); };
+
+  const eodInput = document.getElementById("pf-eodkey");
+  eodInput.value = inv().eodKey || "";
+  eodInput.onchange = () => { inv().eodKey = eodInput.value.trim(); saveState(); };
 }
 
 function pfApiStatus(msg, ok) {
@@ -1421,6 +1426,7 @@ function upsertPrices(asset, entries) {
 const API_HELP = {
   "": "Les cours sont saisis à la main ou importés par fichier.",
   coingecko: "Identifiant CoinGecko de la crypto : bitcoin, ethereum, solana, cardano… (gratuit, sans clé). En cas de doute, tapez le nom et l'outil vous proposera les identifiants proches.",
+  eodhd: "Symbole au format TICKER.BOURSE : WSP.TO (Toronto), MC.PA (Euronext Paris), AAPL.US, CW8.PA… Nécessite une clé gratuite EODHD (Portefeuille → Paramètres). Le plan gratuit couvre toutes les bourses, avec un an d'historique et 20 requêtes par jour.",
   twelvedata: "Symbole de l'action, du forex ou de la crypto, ex. AAPL, BTC/USD, EUR/USD. Nécessite une clé gratuite Twelve Data (Portefeuille → Paramètres). Attention : le plan gratuit couvre les bourses américaines, le forex et les cryptos, mais pas les places européennes (Euronext…) — pour un ETF européen, préférez l'import Excel/CSV ou la saisie manuelle."
 };
 
@@ -1481,8 +1487,8 @@ document.getElementById("btn-fetch-prices").addEventListener("click", async () =
   if (!asset.symbol) { priceStatus("Indiquez l'identifiant ou le symbole de l'actif.", false); return; }
   priceStatus("Récupération des cours…", true);
   try {
-    const entries = asset.source === "coingecko"
-      ? await fetchCoinGecko(asset)
+    const entries = asset.source === "coingecko" ? await fetchCoinGecko(asset)
+      : asset.source === "eodhd" ? await fetchEODHD(asset)
       : await fetchTwelveData(asset);
     const { added, replaced } = upsertPrices(asset, entries);
     saveState();
@@ -1519,6 +1525,28 @@ async function fetchCoinGecko(asset) {
   // Un point par demi-journée : le plus récent gagne
   const dedup = new Map(entries.map(e => [e.ts, e]));
   return [...dedup.values()];
+}
+
+async function fetchEODHD(asset) {
+  const key = (inv().eodKey || "").trim();
+  if (!key) throw new Error("Renseignez d'abord votre clé EODHD gratuite dans Portefeuille → Paramètres (inscription sur eodhd.com).");
+  const url = `https://eodhd.com/api/eod/${encodeURIComponent(asset.symbol)}?api_token=${encodeURIComponent(key)}&period=d&fmt=json`;
+  const res = await fetch(url);
+  if (res.status === 401 || res.status === 403)
+    throw new Error("EODHD refuse la clé API (" + res.status + ") — vérifiez-la dans Portefeuille → Paramètres, ou votre quota de 20 requêtes/jour est peut-être épuisé.");
+  if (res.status === 404)
+    throw new Error(`EODHD ne connaît pas « ${asset.symbol} ». Format attendu : TICKER.BOURSE, ex. WSP.TO, MC.PA, AAPL.US. Cherchez le bon code sur eodhd.com.`);
+  if (res.status === 402)
+    throw new Error("EODHD : ces données ne sont pas incluses dans le plan gratuit.");
+  if (!res.ok) throw new Error("EODHD a répondu avec une erreur (" + res.status + ").");
+  const data = await res.json();
+  if (!Array.isArray(data) || !data.length)
+    throw new Error("EODHD n'a renvoyé aucun cours pour ce symbole.");
+  return data.map(v => {
+    const date = parseDate(v.date);
+    const price = parseAmount(v.close ?? v.adjusted_close);
+    return date && !isNaN(price) ? { ts: tsOf(date, "PM"), price } : null;
+  }).filter(Boolean);
 }
 
 async function fetchTwelveData(asset) {
